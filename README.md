@@ -1,46 +1,65 @@
-import { inventoryItems } from '@/lib/mock-data';
+# Tenant Management System
 
-export default function InventoryPage() {
-  return (
-    <>
-      <header className="topbar">
-        <div>
-          <p className="eyebrow">Operations</p>
-          <h1>Inventory</h1>
-        </div>
-      </header>
+A full-stack tenant management system with POS and inventory modules.
 
-      <section className="card">
-        <div className="section-header">
-          <h2>Stock overview</h2>
-          <span className="tag neutral">{inventoryItems.length} products</span>
-        </div>
+## Features
 
-        <table className="table">
-          <thead>
-            <tr>
-              <th>Product</th>
-              <th>SKU</th>
-              <th>Category</th>
-              <th>Stock</th>
-              <th>Price</th>
-            </tr>
-          </thead>
-          <tbody>
-            {inventoryItems.map((item) => (
-              <tr key={item.id}>
-                <td>{item.name}</td>
-                <td>{item.sku}</td>
-                <td>{item.category}</td>
-                <td>
-                  <span className={item.stock < 10 ? 'danger-text' : ''}>{item.stock}</span>
-                </td>
-                <td>{item.price.toLocaleString()} Tsh</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </section>
-    </>
-  );
-}
+- Tenant management with TIN support
+- Rent due reminders and notifications
+- POS module with customer name and TIN entry
+- 15% VAT toggle on sales
+- Inventory tracking and low-stock visibility
+- Prisma + SQLite data layer
+
+## Prerequisites
+
+- Node.js 18+
+- npm
+
+## Local setup
+
+### Linux/macOS
+
+```bash
+bash setup.sh
+```
+
+### Windows PowerShell
+
+```powershell
+npm install
+@'
+DATABASE_URL="file:./dev.db"
+'@ | Set-Content -Path .env
+npx prisma generate
+npx prisma db push
+npm run dev
+```
+
+### Manual
+
+```bash
+npm install
+printf '%s\n' 'DATABASE_URL="file:./dev.db"' > .env
+npx prisma generate
+npx prisma db push
+npm run dev
+```
+
+## Access the app
+
+Open:
+
+```text
+http://localhost:3000
+```
+
+## Notes
+
+- The app uses SQLite for local development.
+- A demo dataset is included through Prisma seed logic.
+- If port 3000 is busy, run:
+
+```bash
+npm run dev -- --port 3001
+```
