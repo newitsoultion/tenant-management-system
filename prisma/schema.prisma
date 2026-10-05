@@ -1,0 +1,76 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Tenant {
+  id           String    @id @default(cuid())
+  name         String
+  phone        String?
+  email        String?
+  tin          String?
+  unit         String
+  monthlyRent  Float
+  rentDueDate  String
+  status       String
+  leaseStart   DateTime?
+  leaseEnd     DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  payments     Payment[]
+}
+
+model Payment {
+  id          String   @id @default(cuid())
+  tenantId    String
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  amount      Float
+  paymentDate DateTime
+  method      String
+  status      String
+  reference   String?
+  notes       String?
+  createdAt   DateTime @default(now())
+}
+
+model Product {
+  id                  String     @id @default(cuid())
+  name                String
+  sku                 String     @unique
+  category            String
+  unitPrice           Float
+  stock               Int        @default(0)
+  lowStockThreshold   Int        @default(10)
+  createdAt           DateTime   @default(now())
+  updatedAt           DateTime   @updatedAt
+  saleItems           SaleItem[]
+}
+
+model Sale {
+  id             String     @id @default(cuid())
+  customerName   String
+  customerTin    String?
+  subtotal       Float
+  vatAmount      Float      @default(0)
+  totalAmount    Float
+  paymentMethod  String
+  status         String
+  createdAt      DateTime   @default(now())
+  items          SaleItem[]
+}
+
+model SaleItem {
+  id          String   @id @default(cuid())
+  saleId      String
+  sale        Sale     @relation(fields: [saleId], references: [id], onDelete: Cascade)
+  productId   String
+  product     Product  @relation(fields: [productId], references: [id], onDelete: Restrict)
+  quantity    Int
+  unitPrice   Float
+  subtotal    Float
+  createdAt   DateTime @default(now())
+}

@@ -1,0 +1,23 @@
+export function formatCurrency(value: number) {
+  return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(value);
+}
+
+export function calculateDaysUntil(dateValue: string) {
+  const today = new Date();
+  const dueDate = new Date(dateValue);
+  const diffTime = dueDate.getTime() - today.getTime();
+  return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+}
+
+export function buildRentAlerts(tenants: Array<{ name: string; unit: string; monthlyRent: number; rentDueDate: string; status: string }>) {
+  return tenants
+    .filter((tenant) => tenant.status === 'Active')
+    .map((tenant) => ({
+      id: tenant.name,
+      tenant: tenant.name,
+      unit: tenant.unit,
+      amount: formatCurrency(tenant.monthlyRent),
+      daysLeft: calculateDaysUntil(tenant.rentDueDate)
+    }))
+    .filter((alert) => alert.daysLeft <= 7);
+}

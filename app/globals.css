@@ -1,46 +1,45 @@
-import { inventoryItems } from '@/lib/mock-data';
+import type { Metadata } from 'next';
+import './globals.css';
+import Link from 'next/link';
 
-export default function InventoryPage() {
+export const metadata: Metadata = {
+  title: 'Tenant Management System',
+  description: 'Tenant management, POS, and inventory reporting.'
+};
+
+const navItems = [
+  { href: '/', label: 'Dashboard' },
+  { href: '/tenants', label: 'Tenants' },
+  { href: '/pos', label: 'POS' },
+  { href: '/inventory', label: 'Inventory' }
+];
+
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <>
-      <header className="topbar">
-        <div>
-          <p className="eyebrow">Operations</p>
-          <h1>Inventory</h1>
-        </div>
-      </header>
+    <html lang="en">
+      <body>
+        <div className="shell">
+          <aside className="sidebar">
+            <div className="brand">
+              <span className="logo">T</span>
+              <div>
+                <strong>TenantFlow</strong>
+                <small>Property + Retail</small>
+              </div>
+            </div>
 
-      <section className="card">
-        <div className="section-header">
-          <h2>Stock overview</h2>
-          <span className="tag neutral">{inventoryItems.length} products</span>
-        </div>
+            <nav className="nav">
+              {navItems.map((item) => (
+                <Link key={item.href} href={item.href} className="nav-link">
+                  {item.label}
+                </Link>
+              ))}
+            </nav>
+          </aside>
 
-        <table className="table">
-          <thead>
-            <tr>
-              <th>Product</th>
-              <th>SKU</th>
-              <th>Category</th>
-              <th>Stock</th>
-              <th>Price</th>
-            </tr>
-          </thead>
-          <tbody>
-            {inventoryItems.map((item) => (
-              <tr key={item.id}>
-                <td>{item.name}</td>
-                <td>{item.sku}</td>
-                <td>{item.category}</td>
-                <td>
-                  <span className={item.stock < 10 ? 'danger-text' : ''}>{item.stock}</span>
-                </td>
-                <td>{item.price.toLocaleString()} Tsh</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </section>
-    </>
+          <main className="content">{children}</main>
+        </div>
+      </body>
+    </html>
   );
 }

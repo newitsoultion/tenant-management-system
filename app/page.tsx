@@ -1,111 +1,68 @@
-import Link from 'next/link';
-import { dashboardMetrics, rentAlerts, recentSales, tenants } from '@/lib/mock-data';
+import { NextResponse } from 'next/server';
+import { prisma } from '@/lib/prisma';
 
-export default function DashboardPage() {
-  const totalRentCollected = dashboardMetrics.reduce((sum, item) => sum + item.value, 0);
+export async function POST(request: Request) {
+  const body = await request.json();
+  const { customerName, customerTin, items, vatEnabled, paymentMethod } = body;
 
-  return (
-    <>
-      <header className="topbar">
-        <div>
-          <p className="eyebrow">Operations overview</p>
-          <h1>Dashboard</h1>
-        </div>
-        <Link href="/pos" className="primary-button">
-          New POS Sale
-        </Link>
-      </header>
+  if (!customerName || !Array.isArray(items) || items.length === 0) {
+    return NextResponse.json({ error: 'Invalid sale payload' }, { status: 400 });
+  }
 
-      <section className="grid metrics-grid">
-        {dashboardMetrics.map((metric) => (
-          <div key={metric.label} className="card metric-card">
-            <span>{metric.label}</span>
-            <strong>{metric.value}</strong>
-            <small>{metric.note}</small>
-          </div>
-        ))}
-      </section>
+  const productIds = items.map((item: any) => item.productId);
+  const products = await prisma.product.findMany({ where: { id: { in: productIds } } });
 
-      <section className="two-column-grid">
-        <div className="card">
-          <div className="section-header">
-            <h2>Rent due reminders</h2>
-            <span className="tag warning">{rentAlerts.length} alerts</span>
-          </div>
+  const productMap = new Map(products.map((product) => [product.id, product]));
+  let subtotal = 0;
 
-          <div className="stack-list">
-            {rentAlerts.map((alert) => (
-              <div key={alert.id} className="list-row warn-row">
-                <div>
-                  <strong>{alert.tenant}</strong>
-                  <small>{alert.unit}</small>
-                </div>
-                <div className="right-align">
-                  <span>{alert.daysLeft} days left</span>
-                  <small>{alert.amount}</small>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
+  for (const item of items) {
+    const product = productMap.get(item.productId);
+    if (!product) {
+      return NextResponse.json({ error: `Product not found: ${item.productId}` }, { status: 400 });
+    }
 
-        <div className="card">
-          <div className="section-header">
-            <h2>Tenant summary</h2>
-            <span className="tag success">{tenants.length} tenants</span>
-          </div>
+    subtotal += item.quantity * product.unitPrice;
+  }
 
-          <div className="stack-list">
-            {tenants.slice(0, 4).map((tenant) => (
-              <div key={tenant.id} className="list-row">
-                <div>
-                  <strong>{tenant.name}</strong>
-                  <small>{tenant.unit}</small>
-                </div>
-                <div className="right-align">
-                  <span>{tenant.status}</span>
-                  <small>{tenant.rentDue}</small>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
+  const vatAmount = vatEnabled ? subtotal * 0.15 : 0;
+  const totalAmount = subtotal + vatAmount;
 
-      <section className="card">
-        <div className="section-header">
-          <h2>Recent POS sales</h2>
-          <span className="tag neutral">{recentSales.length} entries</span>
-        </div>
+  const sale = await prisma.sale.create({
+    data: {
+      customerName,
+      customerTin: customerTin || null,
+      subtotal,
+      vatAmount,
+      totalAmount,
+      paymentMethod: paymentMethod || 'Cash',
+      status: 'Paid',
+      items: {
+        create: items.map((item: any) => {
+          const product = productMap.get(item.productId)!;
+          const lineTotal = item.quantity * product.unitPrice;
 
-        <table className="table">
-          <thead>
-            <tr>
-              <th>Customer</th>
-              <th>Transaction</th>
-              <th>Amount</th>
-              <th>Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            {recentSales.map((sale) => (
-              <tr key={sale.id}>
-                <td>{sale.customer}</td>
-                <td>{sale.reference}</td>
-                <td>{sale.amount}</td>
-                <td>
-                  <span className={`status status-${sale.status.toLowerCase()}`}>{sale.status}</span>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </section>
+          return {
+            productId: product.id,
+            quantity: Number(item.quantity),
+            unitPrice: product.unitPrice,
+            subtotal: lineTotal
+          };
+        })
+      }
+    }
+  });
 
-      <div className="summary-banner">
-        <strong>Total rent collected this cycle:</strong>
-        <span>{totalRentCollected.toFixed(2)}</span>
-      </div>
-    </>
-  );
+  for (const item of items) {
+    const product = productMap.get(item.productId)!;
+    await prisma.product.update({
+      where: { id: product.id },
+      data: {
+        stock: {
+          decrement: Number(item.quantity)
+        }
+      }
+    });
+  }
+
+  return NextResponse.json({ sale }, { status: 201 });
 }
